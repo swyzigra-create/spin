@@ -1,25 +1,24 @@
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 repeat wait() until game:IsLoaded() wait()
     game:GetService("Players").LocalPlayer.Idled:connect(function()
     game:GetService("VirtualUser"):ClickButton2(Vector2.new());
 end);
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Drifter0507/Shamrock/main/MainLibrary", true))();
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 pcall(function()
     for i, v in pairs(getconnections(game:GetService("ScriptContext").Error)) do
         v:Disable();
     end;
 end);
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local Workspace = game:GetService('Workspace');
 local ReplicatedStorage = game:GetService('ReplicatedStorage');
 local Players = game:GetService('Players');
 local Client = Players.LocalPlayer;
 local RunService = game:GetService('RunService');
-local Workspace = game:GetService("Workspace");
 local Lighting = game:GetService("Lighting");
 local UIS = game:GetService("UserInputService");
 local Teams = game:GetService("Teams");
@@ -29,13 +28,11 @@ local Camera = Workspace.CurrentCamera;
 local Mouse = Client:GetMouse();
 local Terrain = Workspace.Terrain;
 local VirtualUser = game:GetService("VirtualUser");
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local Modules = ReplicatedStorage.Modules;
 local EmoteModule = Modules.EmoteModule;
 local Emotes = Client.PlayerGui.MainGUI.Game:FindFirstChild("Emotes");
 local EmoteList = {"headless","zombie","zen","ninja","floss","dab"};
-local CanGrab 
-CanGrab = false;
 
 local Origins = {{2,0,0},{-2,0,0},{0,2,0},{0,-2,0},{0,0,1},{0,0,-1}};
 
@@ -71,7 +68,7 @@ local Murderer, Sheriff = nil, nil;
 
 function GetMurderer()
     for i,v in pairs(Players:GetChildren()) do 
-        if v.Backpack:FindFirstChild("Knife") or v.Character:FindFirstChild("Knife") and v.Name == "Tool" then
+        if v.Backpack:FindFirstChild("Knife") or v.Character:FindFirstChild("Knife") then
             return v.Name;
         end;
     end;
@@ -80,13 +77,13 @@ end;
 
 function GetSheriff()
     for i,v in pairs(Players:GetChildren()) do 
-        if v.Backpack:FindFirstChild("Gun") or v.Character:FindFirstChild("Gun") and v.Name == "Tool" then
+        if v.Backpack:FindFirstChild("Gun") or v.Character:FindFirstChild("Gun") then
             return v.Name;
         end;
-        return nil;
     end;
+    return nil;
 end;
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local Character = nil;
 local RootPart = nil;
 local Humanoid = nil;
@@ -117,55 +114,39 @@ end;
 SetCharVars();
 Client.CharacterAdded:Connect(SetCharVars);
 
-local Ws;
-Ws = hookmetamethod(game, "__index", function(self, Value)
-    if tostring(self) == "Humanoid" and tostring(Value) == "WalkSpeed" then
-        return getgenv().WS;
-    end;
-    return Ws(self, Value);
-end);
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 
-local Jp;
-Jp = hookmetamethod(game, "__index", function(self, Value)
-    if tostring(self) == "Humanoid" and tostring(Value) == "JumpPower" then
-        return getgenv().JP;
-    end;
-    return Jp(self, Value);
-end);
-
---<>----<>----<>----<>----<>----<>----<>--
-
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local Window = Library:CreateWindow({Title = "Murder Mystery 2"});
 local Tab1 = Window:CreateTab({Title = "Main", ScrollBar = false});
 local Tab2 = Window:CreateTab({Title = "Economy", ScrollBar = false});
 local Tab3 = Window:CreateTab({Title = "Roles", ScrollBar = false});
 
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local ClientSection = Tab1:CreateSection({
 	Title = "Client"
 });
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local WorldSection = Tab1:CreateSection({
 	Title = "World"
 });
---<>----<>----<>----<>----<>----<>----<>--
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local AutofarmSection = Tab2:CreateSection({
 	Title = "Autofarm"
 });
---<>----<>----<>----<>----<>----<>----<>--
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local MurderSection = Tab3:CreateSection({
 	Title = "Murderer"
 });
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local SheriffSection = Tab3:CreateSection({
 	Title = "Sheriff"
 });
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 ClientSection:CreateToggle({
 	Title = "CTRL click tp",
 	Default = false,
@@ -179,7 +160,7 @@ Mouse.Button1Down:connect(function()
     if not getgenv().ClickTP then return end;
     Character:MoveTo(Mouse.Hit.p);
 end)
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 
 ClientSection:CreateSlider({
 	Title = "WalkSpeed",
@@ -188,10 +169,11 @@ ClientSection:CreateSlider({
 	Default = 16,
 	Callback = function(val)
 		getgenv().WS = tonumber(val);
+        getgenv().Speed = true;
         Humanoid.WalkSpeed = val;
     end
 });
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 ClientSection:CreateSlider({
 	Title = "JumpPower",
 	Min = 50,
@@ -199,10 +181,11 @@ ClientSection:CreateSlider({
 	Default = 50,
 	Callback = function(val)
 		getgenv().JP = tonumber(val);
+        getgenv().Jump = true;
         Humanoid.JumpPower = val;
     end
 });
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local c;
 local h;
 local bv;
@@ -264,7 +247,7 @@ local setVec = function (vec)
     return vec * ((getgenv().FlySpeed or 50) / vec.Magnitude);
 end;
 
-game:GetService("RunService").Heartbeat:connect(function (step)
+game:GetService("RunService").Heartbeat:connect(function (step) -- The actual fly function, called every frame
     if flying and c and c.PrimaryPart then
         local p = c.PrimaryPart.Position;
         local cf = cam.CFrame;
@@ -303,11 +286,11 @@ ClientSection:CreateSlider({
         getgenv().FlySpeed = tonumber(val) or 50;
     end
 });
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 ClientSection:CreateButton({
     Title = "Btools",
     Callback = function()
-        if not Client.Backpack:FindFirstChildOfClass("HopperBun") then
+        if not Client.Backpack:FindFirstChildOfClass("HopperBin") then
             local tool1 = Instance.new("HopperBin",Client.Backpack);
             local tool2 = Instance.new("HopperBin",Client.Backpack);
             local tool3 = Instance.new("HopperBin",Client.Backpack);
@@ -321,7 +304,7 @@ ClientSection:CreateButton({
         end
     end
 })
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 local accessories = {}
 function GodMode()
     if game.Players.LocalPlayer.Character then
@@ -356,22 +339,22 @@ ClientSection:CreateButton({
 
 ClientSection:CreateButton({
 	Title = "Force respawn",
-	Callback = function(state)
+	Callback = function()
 		Character.Head:Remove();
 		Humanoid.BreakJointsOnDeath = false;
 		Humanoid.Health = 0;
 	end;
 });
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 ClientSection:CreateButton({
     Title = "Get all emotes",
     Callback = function()
 		require(EmoteModule).GeneratePage(EmoteList,Emotes,'Free Emotes');
     end
 })
---<>----<>----<>----<>----<>----<>----<>--
---<>----<>----<>----<>----<>----<>----<>--
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 
 local folder = Instance.new("Folder",CoreGui);
 folder.Name = "ESP Holder";
@@ -399,20 +382,20 @@ local function AddBillboard(player)
         pcall(function()
             if player.Character and player.Character:FindFirstChild("Head") then
                 billboard.Adornee = player.Character.Head;
-                if player.Character:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Knife") then
-                    textLabel.TextColor3 = Color3.new(1,0,0);
-                    if not billboard.Enabled and getgenv().MurderEsp then
-                        billboard.Enabled = true
-                    end
-                elseif player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun") then
-                    textLabel.TextColor3 = Color3.new(0,0,1);
-                    if not billboard.Enabled and getgenv().SheriffEsp then
-                        billboard.Enabled = true
-                    end
-                else
-                    textLabel.TextColor3 = Color3.new(0,1,0);
-                end;
             end
+            if player.Character:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Knife") then
+                textLabel.TextColor3 = Color3.new(1,0,0);
+                if not billboard.Enabled and getgenv().MurderEsp then
+                    billboard.Enabled = true
+                end
+            elseif player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun") then
+                textLabel.TextColor3 = Color3.new(0,0,1);
+                if not billboard.Enabled and getgenv().SheriffEsp then
+                    billboard.Enabled = true
+                end
+            else
+                textLabel.TextColor3 = Color3.new(0,1,0);
+            end;
         end);
     until not player.Parent;
 end;
@@ -453,6 +436,23 @@ WorldSection:CreateToggle({
 	Default = false,
 	Callback = function(state)
         getgenv().MurderEsp = state;
+        while getgenv().MurderEsp do
+            wait()
+            pcall(function()
+                for i, v in pairs(folder:GetChildren()) do
+                    if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
+                        local player = Players[tostring(v.Name)]
+                        if player.Character and (player.Character:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Knife")) then
+                            if getgenv().MurderEsp then
+                                v.Enabled = true;
+                            else
+                                v.Enabled = false;
+                            end;
+                        end
+                    end;
+                end;
+            end);
+        end;
 	end
 });
 
@@ -461,10 +461,27 @@ WorldSection:CreateToggle({
 	Default = false,
 	Callback = function(state)
         getgenv().SheriffEsp = state;
+        while getgenv().SheriffEsp do
+            wait()
+            pcall(function()
+                for i, v in pairs(folder:GetChildren()) do
+                    if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
+                        local player = Players[tostring(v.Name)]
+                        if player.Character and (player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun")) then
+                            if getgenv().SheriffEsp then
+                                v.Enabled = true;
+                            else
+                                v.Enabled = false;
+                            end;
+                        end
+                    end;
+                end;
+            end);
+        end;
 	end
 });
---<>----<>----<>----<>----<>----<>----<>--
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 SheriffSection:CreateToggle({
 	Title = "Gun ESP",
 	Default = false,
@@ -494,8 +511,8 @@ coroutine.wrap(function()
         end);
     end);
 end)();
---<>----<>----<>----<>----<>----<>----<>--
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 
 function XrayOn(obj)
     for _,v in pairs(obj:GetChildren()) do
@@ -527,7 +544,7 @@ WorldSection:CreateToggle({
         end;
 	end
 });
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 WorldSection:CreateButton({
     Title = "Unlock workspace",
     Callback = function()
@@ -542,7 +559,7 @@ WorldSection:CreateButton({
 		unlock(workspace);
     end
 })
---<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>----<>--
 WorldSection:CreateDropdown({
 	Text = "Teleports",
 	Array = TeleportTable,
@@ -550,70 +567,4 @@ WorldSection:CreateDropdown({
         if val == "Map" then
             for _,child in pairs(Workspace:GetDescendants()) do
                 if child:IsA("BasePart") and child.Name == "Coin_Server" then
-                    RootPart.CFrame = CFrame.new(child.Parent.Parent.Map:FindFirstChild("Part").Position);
-                end;
-            end;
-        else
-            pcall(function()
-                RootPart.CFrame = CFrame.new(TeleportDict[val]);
-            end)
-        end;
-	end
-})
---<>----<>----<>----<>----<>----<>----<>--
-AutofarmSection:CreateToggle({
-	Title = "Autofarm",
-	Default = false,
-	Callback = function(state)
-        getgenv().Autofarm = state;
-        if not getgenv().AutofarmMethod then 
-            getgenv().AutofarmMethod = "Coins"
-        end;
-        if getgenv().AutofarmMethod == "Coins" then
-            while getgenv().Autofarm do
-                task.wait();
-                local CoinContainer = Workspace:FindFirstChild("CoinContainer", true);
-                if CoinContainer and Client.PlayerGui.MainGUI.Game.CashBag.Visible == true then
-                    local coin = CoinContainer:FindFirstChild("Coin_Server");
-                    if coin then
-                        repeat
-                            RootPart.CFrame = CFrame.new(coin.Position - Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, 0, math.rad(180));
-                            RunService.Stepped:Wait();
-                            if not getgenv().Autofarm then break end;
-                        until not coin:IsDescendantOf(Workspace) or coin.Name ~= "Coin_Server";
-                        task.wait(1.8);
-                    end;
-                else
-                    task.wait(1.5);
-                end;
-            end;
-        else
-            while getgenv().Autofarm do
-                wait();
-                if Client.PlayerGui.MainGUI.Game.CashBag.Visible == true then
-                    for _,v in pairs(Workspace:GetDescendants()) do
-                        if v:IsA("Tool") and v.Name == "Gun" and v.Parent ~= Client.Character and v.Parent ~= Client.Backpack then
-                            local gundrop = v.Parent
-                            if gundrop then
-                                repeat
-                                    RootPart.CFrame = CFrame.new(gundrop.Position - Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, 0, math.rad(180));
-                                    RunService.Stepped:Wait();
-                                    if not getgenv().Autofarm then break end;
-                                until not gundrop:IsDescendantOf(Workspace)
-                                task.wait(1.8);
-                            end
-                        end
-                    end
-                else
-                    task.wait(1.5);
-                end;
-            end;
-        end;
-	end
-});
-
-AutofarmSection:CreateDropdown({
-	Text = "Autofarm Method",
-	Array = {"Coins", "Gun"},
-	Callback = function(val)
-		getgenv().AutofarmMethod = val;
+  
