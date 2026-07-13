@@ -106,11 +106,11 @@ function SetCharVars()
 		end;
 	end);
     if getgenv().Jump then
-		Humanoid.WalkSpeed = getgenv().JP;
+		Humanoid.JumpPower = getgenv().JP;
 	end;
-	Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+	Humanoid:GetPropertyChangedSignal("JumpPower"):Connect(function()
 		if getgenv().Jump then
-			Humanoid.WalkSpeed = getgenv().JP;
+			Humanoid.JumpPower = getgenv().JP;
 		end;
 	end);
 end;
@@ -120,15 +120,15 @@ Client.CharacterAdded:Connect(SetCharVars);
 local Ws;
 Ws = hookmetamethod(game, "__index", function(self, Value)
     if tostring(self) == "Humanoid" and tostring(Value) == "WalkSpeed" then
-        return 16;
+        return getgenv().WS;
     end;
     return Ws(self, Value);
 end);
 
 local Jp;
 Jp = hookmetamethod(game, "__index", function(self, Value)
-    if tostring(self) == "Humanoid" and tostring(Value) == "WalkSpeed" then
-        return 16;
+    if tostring(self) == "Humanoid" and tostring(Value) == "JumpPower" then
+        return getgenv().JP;
     end;
     return Jp(self, Value);
 end);
@@ -187,7 +187,7 @@ ClientSection:CreateSlider({
 	Max = 200,
 	Default = 16,
 	Callback = function(val)
-		getgenv().WS = tonumber(val)--tonumber(val / 10) or 0;
+		getgenv().WS = tonumber(val);
         Humanoid.WalkSpeed = val;
     end
 });
@@ -198,7 +198,7 @@ ClientSection:CreateSlider({
 	Max = 200,
 	Default = 50,
 	Callback = function(val)
-		getgenv().JP = tonumber(val)--tonumber(val / 10) or 0;
+		getgenv().JP = tonumber(val);
         Humanoid.JumpPower = val;
     end
 });
@@ -264,7 +264,7 @@ local setVec = function (vec)
     return vec * ((getgenv().FlySpeed or 50) / vec.Magnitude);
 end;
 
-game:GetService("RunService").Heartbeat:connect(function (step) -- The actual fly function, called every frame
+game:GetService("RunService").Heartbeat:connect(function (step)
     if flying and c and c.PrimaryPart then
         local p = c.PrimaryPart.Position;
         local cf = cam.CFrame;
@@ -397,20 +397,22 @@ local function AddBillboard(player)
     repeat
         wait()
         pcall(function()
-            billboard.Adornee = player.Character.Head;
-            if player.Character:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Knife") then
-                textLabel.TextColor3 = Color3.new(1,0,0);
-                if not billboard.Enabled and getgenv().MurderEsp then
-                    billboard.Enabled = true
-                end
-            elseif player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun") then
-                textLabel.TextColor3 = Color3.new(0,0,1);
-                if not billboard.Enabled and getgenv().SheriffEsp then
-                    billboard.Enabled = true
-                end
-            else
-                textLabel.TextColor3 = Color3.new(0,1,0);
-            end;
+            if player.Character and player.Character:FindFirstChild("Head") then
+                billboard.Adornee = player.Character.Head;
+                if player.Character:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Knife") then
+                    textLabel.TextColor3 = Color3.new(1,0,0);
+                    if not billboard.Enabled and getgenv().MurderEsp then
+                        billboard.Enabled = true
+                    end
+                elseif player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun") then
+                    textLabel.TextColor3 = Color3.new(0,0,1);
+                    if not billboard.Enabled and getgenv().SheriffEsp then
+                        billboard.Enabled = true
+                    end
+                else
+                    textLabel.TextColor3 = Color3.new(0,1,0);
+                end;
+            end
         end);
     until not player.Parent;
 end;
@@ -423,7 +425,9 @@ end;
 Players.PlayerAdded:Connect(AddBillboard);
 
 Players.PlayerRemoving:Connect(function(player)
-    folder[player.Name]:Destroy();
+    if folder:FindFirstChild(player.Name) then
+        folder[player.Name]:Destroy();
+    end
 end);
 
 
@@ -449,22 +453,6 @@ WorldSection:CreateToggle({
 	Default = false,
 	Callback = function(state)
         getgenv().MurderEsp = state;
-        while getgenv().MurderEsp do
-            wait()
-            pcall(function()
-                for i, v in pairs(folder:GetChildren()) do
-                    if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
-                        if Players[tostring(v.Name)].Character:FindFirstChild("Knife") or Players[tostring(v.Name)].Backpack:FindFirstChild("Knife")  then
-                            if getgenv().MurderEsp then
-                                v.Enabled = true;
-                            else
-                                v.Enabled = false;
-                            end;
-                        end
-                    end;
-                end;
-            end);
-        end;
 	end
 });
 
@@ -473,22 +461,6 @@ WorldSection:CreateToggle({
 	Default = false,
 	Callback = function(state)
         getgenv().SheriffEsp = state;
-        while getgenv().SheriffEsp do
-            wait()
-            pcall(function()
-                for i, v in pairs(folder:GetChildren()) do
-                    if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
-                        if Players[tostring(v.Name)].Character:FindFirstChild("Gun") or Players[tostring(v.Name)].Backpack:FindFirstChild("Gun")  then
-                            if getgenv().SheriffEsp then
-                                v.Enabled = true;
-                            else
-                                v.Enabled = false;
-                            end;
-                        end
-                    end;
-                end;
-            end);
-        end;
 	end
 });
 --<>----<>----<>----<>----<>----<>----<>--
@@ -515,6 +487,9 @@ coroutine.wrap(function()
         
                 GunHighlight.Enabled = getgenv().GunESP;
                 GunHandleAdornment.Visible = getgenv().GunESP;
+            else
+                GunHighlight.Enabled = false;
+                GunHandleAdornment.Visible = false;
             end;
         end);
     end);
@@ -591,7 +566,9 @@ AutofarmSection:CreateToggle({
 	Default = false,
 	Callback = function(state)
         getgenv().Autofarm = state;
-        if not getgenv().AutofarmMethod then return end;
+        if not getgenv().AutofarmMethod then 
+            getgenv().AutofarmMethod = "Coins"
+        end;
         if getgenv().AutofarmMethod == "Coins" then
             while getgenv().Autofarm do
                 task.wait();
@@ -613,4 +590,30 @@ AutofarmSection:CreateToggle({
         else
             while getgenv().Autofarm do
                 wait();
-                if Client.PlayerGui.MainGUI.Game.CashBag.Vis
+                if Client.PlayerGui.MainGUI.Game.CashBag.Visible == true then
+                    for _,v in pairs(Workspace:GetDescendants()) do
+                        if v:IsA("Tool") and v.Name == "Gun" and v.Parent ~= Client.Character and v.Parent ~= Client.Backpack then
+                            local gundrop = v.Parent
+                            if gundrop then
+                                repeat
+                                    RootPart.CFrame = CFrame.new(gundrop.Position - Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, 0, math.rad(180));
+                                    RunService.Stepped:Wait();
+                                    if not getgenv().Autofarm then break end;
+                                until not gundrop:IsDescendantOf(Workspace)
+                                task.wait(1.8);
+                            end
+                        end
+                    end
+                else
+                    task.wait(1.5);
+                end;
+            end;
+        end;
+	end
+});
+
+AutofarmSection:CreateDropdown({
+	Text = "Autofarm Method",
+	Array = {"Coins", "Gun"},
+	Callback = function(val)
+		getgenv().AutofarmMethod = val;
