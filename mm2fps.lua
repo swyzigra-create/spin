@@ -179,7 +179,7 @@ local function aimbot()
     end
 end
 
--- ====== ROLE HIGHLIGHT ======
+-- ====== ROLE HIGHLIGHT (ESP) - СРАЗУ ВКЛЮЧАЕТСЯ ======
 local function updateRoles()
     for _, player in pairs(Players:GetPlayers()) do
         if player.Character then
@@ -202,8 +202,6 @@ local function updateRoles()
 end
 
 local function roleHighlight()
-    if not roleHighlightEnabled then return end
-    
     updateRoles()
     
     for _, player in pairs(Players:GetPlayers()) do
@@ -211,37 +209,98 @@ local function roleHighlight()
             local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
             
             if humanoidRootPart then
-                if not highlightedPlayers[player.UserId] then
-                    local highlight = Instance.new("Highlight")
-                    highlight.Parent = player.Character
-                    highlightedPlayers[player.UserId] = highlight
-                end
-                
-                local highlight = highlightedPlayers[player.UserId]
                 local role = playerRoles[player.UserId] or "Unknown"
                 
-                if role == "Murderer" then
-                    highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                elseif role == "Sheriff" then
-                    highlight.FillColor = Color3.fromRGB(0, 0, 255)
-                else
-                    highlight.FillColor = Color3.fromRGB(0, 255, 0)
+                -- ВСЕГДА подсвечиваем убийцу и шерифа
+                if role == "Murderer" or role == "Sheriff" then
+                    if not highlightedPlayers[player.UserId] then
+                        local highlight = Instance.new("Highlight")
+                        highlight.Parent = player.Character
+                        highlightedPlayers[player.UserId] = highlight
+                    end
+                    
+                    local highlight = highlightedPlayers[player.UserId]
+                    
+                    if role == "Murderer" then
+                        highlight.FillColor = Color3.fromRGB(255, 0, 0)
+                        highlight.FillTransparency = 0.2
+                        highlight.OutlineTransparency = 0
+                    elseif role == "Sheriff" then
+                        highlight.FillColor = Color3.fromRGB(0, 0, 255)
+                        highlight.FillTransparency = 0.2
+                        highlight.OutlineTransparency = 0
+                    end
                 end
             end
         end
     end
 end
 
--- ====== GRAB GUN ======
+-- ====== GRAB GUN (ИСПРАВЛЕНО - БЕРЁТ ПИСТОЛЕТ ШЕРИФА) ======
 local function grabGun()
-    for _, obj in pairs(Workspace:GetDescendants()) do
-        if obj:IsA("Tool") and (obj.Name == "Gun" or obj.Name == "Knife") then
-            obj.Parent = Character
-            statusLabel.Text = "🔫 Схватил!"
-            task.wait(1)
-            statusLabel.Text = "Готово"
-            break
+    updateRoles()
+    
+    -- Ищем мёртвого шерифа или живого шерифа
+    local sheriffPlayer = nil
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= Player and player.Character then
+            local role = playerRoles[player.UserId]
+            if role == "Sheriff" then
+                sheriffPlayer = player
+                break
+            end
         end
+    end
+    
+    if sheriffPlayer and sheriffPlayer.Character then
+        local sheriffRootPart = sheriffPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local playerRootPart = Character:FindFirstChild("HumanoidRootPart")
+        
+        if sheriffRootPart and playerRootPart then
+            -- Ищем пистолет шерифа
+            local gunFound = false
+            
+            -- Сначала ищем в персонаже шерифа
+            for _, obj in pairs(sheriffPlayer.Character:GetChildren()) do
+                if obj:IsA("Tool") and obj.Name == "Gun" then
+                    obj.Parent = Character
+                    statusLabel.Text = "🔫 Пистолет!"
+                    task.wait(1)
+                    statusLabel.Text = "Готово"
+                    gunFound = true
+                    break
+                end
+            end
+            
+            -- Если не нашли в персонаже, ищем на земле возле шерифа
+            if not gunFound then
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj:IsA("Tool") and obj.Name == "Gun" then
+                        local gunPos = obj:FindFirstChild("Handle")
+                        if gunPos then
+                            local distance = (gunPos.Position - sheriffRootPart.Position).Magnitude
+                            if distance < 50 then
+                                -- Телепортируемся к пистолету
+                                playerRootPart.CFrame = gunPos.CFrame + Vector3.new(0, 0, 3)
+                                task.wait(0.3)
+                                obj.Parent = Character
+                                statusLabel.Text = "🔫 Взял пистолет!"
+                                task.wait(1)
+                                statusLabel.Text = "Готово"
+                                gunFound = true
+                                break
+                            end
+                        end
+                    end
+                end
+            end
+            
+            if not gunFound then
+                statusLabel.Text = "❌ Пистолет не найден"
+            end
+        end
+    else
+        statusLabel.Text = "❌ Шериф не найден"
     end
 end
 
@@ -258,51 +317,81 @@ local function noclip()
     end
 end
 
--- ====== FLY ======
-local flySpeed = 50
-local flyDirection = Vector3.new(0, 0, 0)
+-- ====== FLY (ПОЛНОСТЬЮ ПЕРЕДЕЛАН) ======
+local flySpeed = 100
+local currentFlyVelocity = Vector3.new(0, 0, 0)
 
 local function fly()
     if not flyEnabled then return end
     
     if Character:FindFirstChild("HumanoidRootPart") then
         local rootPart = Character.HumanoidRootPart
+        local moveDirection = Vector3.new(0, 0, 0)
         
+        -- Получаем направление от камеры
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-            flyDirection = flyDirection + (Camera.CFrame.LookVector * Vector3.new(1, 0, 1)).Unit
+            moveDirection = moveDirection + Camera.CFrame.LookVector
         end
         if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-            flyDirection = flyDirection - (Camera.CFrame.LookVector * Vector3.new(1, 0, 1)).Unit
+            moveDirection = moveDirection - Camera.CFrame.LookVector
         end
         if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-            flyDirection = flyDirection - Camera.CFrame.RightVector
+            moveDirection = moveDirection - Camera.CFrame.RightVector
         end
         if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-            flyDirection = flyDirection + Camera.CFrame.RightVector
+            moveDirection = moveDirection + Camera.CFrame.RightVector
         end
         if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-            flyDirection = flyDirection + Vector3.new(0, 1, 0)
+            moveDirection = moveDirection + Vector3.new(0, 1, 0)
         end
         if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-            flyDirection = flyDirection - Vector3.new(0, 1, 0)
+            moveDirection = moveDirection - Vector3.new(0, 1, 0)
         end
         
-        flyDirection = flyDirection:Lerp(Vector3.new(0, 0, 0), 0.1)
-        rootPart.CFrame = rootPart.CFrame + flyDirection * (flySpeed / 60)
+        -- Нормализуем и применяем скорость
+        if moveDirection.Magnitude > 0 then
+            moveDirection = moveDirection.Unit * flySpeed
+        else
+            moveDirection = Vector3.new(0, 0, 0)
+        end
+        
+        currentFlyVelocity = moveDirection
+        rootPart.CFrame = rootPart.CFrame + currentFlyVelocity / 60
     end
 end
 
--- ====== BUNNYHOP ======
-local canBunnyhop = true
+-- ====== BUNNYHOP (УСИЛЕНО) ======
+local lastJumpTime = 0
+local jumpCooldown = 0.3
 
 local function bunnyhop()
-    if not bunnyhopEnabled or not canBunnyhop then return end
+    if not bunnyhopEnabled then return end
     
     if Character:FindFirstChild("Humanoid") and Character:FindFirstChild("HumanoidRootPart") then
-        Character.Humanoid:Jump()
-        canBunnyhop = false
-        task.wait(0.1)
-        canBunnyhop = true
+        local currentTime = tick()
+        local rootPart = Character.HumanoidRootPart
+        
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            if (currentTime - lastJumpTime) > jumpCooldown then
+                -- Даём обычный прыжок
+                Character.Humanoid:Jump()
+                
+                -- Добавляем BodyVelocity для усиления прыжка
+                if rootPart:FindFirstChild("JumpBoost") then
+                    rootPart.JumpBoost:Destroy()
+                end
+                
+                local bodyVelocity = Instance.new("BodyVelocity")
+                bodyVelocity.Name = "JumpBoost"
+                bodyVelocity.Velocity = Vector3.new(0, 200, 0) -- Очень высокий прыжок
+                bodyVelocity.MaxForce = Vector3.new(0, math.huge, 0)
+                bodyVelocity.Parent = rootPart
+                
+                game:GetService("Debris"):AddItem(bodyVelocity, 0.15)
+                
+                lastJumpTime = currentTime
+            end
+        end
     end
 end
 
@@ -333,7 +422,7 @@ roleBtn.MouseButton1Click:Connect(function()
 end)
 
 grabBtn.MouseButton1Click:Connect(function()
-    statusLabel.Text = "Ищу оружие..."
+    statusLabel.Text = "⏳ Ищу пистолет..."
     grabGun()
 end)
 
@@ -345,6 +434,7 @@ end)
 
 flyBtn.MouseButton1Click:Connect(function()
     flyEnabled = not flyEnabled
+    currentFlyVelocity = Vector3.new(0, 0, 0)
     flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(255, 100, 255) or Color3.fromRGB(200, 100, 200)
     statusLabel.Text = flyEnabled and "FLY: ВКЛ" or "FLY: ВЫКЛ"
 end)
@@ -358,17 +448,18 @@ end)
 -- ====== ОСНОВНОЙ ЦИКЛ ======
 RunService.RenderStepped:Connect(function()
     if Character and Character:FindFirstChild("Humanoid") and Character.Humanoid.Health > 0 then
-        aimbot()
+        -- ESP ВСЕГДА РАБОТАЕТ
         roleHighlight()
+        
+        -- Остальные функции
+        aimbot()
         noclip()
         fly()
-        
-        if bunnyhopEnabled and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-            bunnyhop()
-        end
+        bunnyhop()
     end
 end)
 
 print("✅ MM2 Exploit готов!")
 print("🎮 Нажимай кнопки на экране для управления!")
 print("📋 Кнопка меню закрытия справа в заголовке")
+print("👁️ ESP ВКЛЮЧЕН СРАЗУ - ВИДИШЬ КРАСНЫЙ (УБИЙЦА) и СИНИЙ (ШЕРИФ)!")
