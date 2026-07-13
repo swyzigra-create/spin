@@ -1,4 +1,4 @@
--- MM2 Exploit для Delta Injector (Мобила)
+-- MM2 Exploit для Delta Injector (Мобила с GUI кнопками)
 -- Функции: Aimbot, Role Highlight, Grab Gun, Noclip, Fly, Bunnyhop
 
 local Players = game:GetService("Players")
@@ -24,6 +24,69 @@ local grabGunEnabled = false
 local playerRoles = {}
 local highlightedPlayers = {}
 
+-- ====== СОЗДАЁМ GUI ======
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "MM2ExploitGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = Player:WaitForChild("PlayerGui")
+
+-- Главное меню (Frame с кнопками)
+local menuFrame = Instance.new("Frame")
+menuFrame.Name = "MenuFrame"
+menuFrame.Size = UDim2.new(0, 280, 0, 450)
+menuFrame.Position = UDim2.new(0, 10, 0.5, -225)
+menuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+menuFrame.BorderSizePixel = 2
+menuFrame.BorderColor3 = Color3.fromRGB(255, 50, 100)
+menuFrame.Parent = screenGui
+
+-- Заголовок меню
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Title"
+titleLabel.Size = UDim2.new(1, 0, 0, 50)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+titleLabel.TextColor3 = Color3.fromRGB(255, 50, 100)
+titleLabel.TextSize = 20
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.Text = "🎮 MM2 EXPLOIT"
+titleLabel.Parent = menuFrame
+
+-- Функция создания кнопки
+local function createButton(name, position, color, parent)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Size = UDim2.new(0.9, 0, 0, 50)
+    button.Position = position
+    button.BackgroundColor3 = color
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 16
+    button.Font = Enum.Font.GothamBold
+    button.Text = name
+    button.Parent = parent
+    return button
+end
+
+-- Создаём кнопки
+local aimbotBtn = createButton("🎯 AIMBOT", UDim2.new(0.05, 0, 0, 60), Color3.fromRGB(200, 50, 50), menuFrame)
+local roleBtn = createButton("👁️ ROLES", UDim2.new(0.05, 0, 0, 120), Color3.fromRGB(50, 100, 200), menuFrame)
+local grabBtn = createButton("🔫 GRAB GUN", UDim2.new(0.05, 0, 0, 180), Color3.fromRGB(200, 150, 50), menuFrame)
+local noclipBtn = createButton("👻 NOCLIP", UDim2.new(0.05, 0, 0, 240), Color3.fromRGB(100, 200, 100), menuFrame)
+local flyBtn = createButton("🛸 FLY", UDim2.new(0.05, 0, 0, 300), Color3.fromRGB(200, 100, 200), menuFrame)
+local bunnyhopBtn = createButton("🐰 BUNNYHOP", UDim2.new(0.05, 0, 0, 360), Color3.fromRGB(255, 200, 50), menuFrame)
+
+-- Статус дисплей
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Name = "Status"
+statusLabel.Size = UDim2.new(0.9, 0, 0, 35)
+statusLabel.Position = UDim2.new(0.05, 0, 0, 410)
+statusLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
+statusLabel.TextSize = 12
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.Text = "Статус: готово"
+statusLabel.Parent = menuFrame
+
 -- ====== AIMBOT ======
 local function getEnemyMurderer()
     for _, player in pairs(Players:GetPlayers()) do
@@ -31,7 +94,6 @@ local function getEnemyMurderer()
             local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
             if humanoidRootPart and player.Character:FindFirstChild("Humanoid") then
                 if player.Character.Humanoid.Health > 0 then
-                    -- Проверяем роль (мардер/шериф)
                     if playerRoles[player.UserId] == "Murderer" or playerRoles[player.UserId] == "Sheriff" then
                         return humanoidRootPart
                     end
@@ -54,16 +116,13 @@ end
 
 -- ====== ROLE HIGHLIGHT ======
 local function updateRoles()
-    -- Получаем роли из GameTag
     for _, player in pairs(Players:GetPlayers()) do
         if player.Character then
             local humanoid = player.Character:FindFirstChild("Humanoid")
             if humanoid then
-                -- Проверяем теги игрока
                 if player:FindFirstChild("Role") then
                     playerRoles[player.UserId] = player.Role.Value
                 else
-                    -- Пытаемся определить роль по оружию
                     if player.Character:FindFirstChild("Knife") then
                         playerRoles[player.UserId] = "Murderer"
                     elseif player.Character:FindFirstChild("Gun") then
@@ -96,13 +155,12 @@ local function roleHighlight()
                 local highlight = highlightedPlayers[player.UserId]
                 local role = playerRoles[player.UserId] or "Unknown"
                 
-                -- Разные цвета для разных ролей
                 if role == "Murderer" then
-                    highlight.FillColor = Color3.fromRGB(255, 0, 0) -- Красный
+                    highlight.FillColor = Color3.fromRGB(255, 0, 0)
                 elseif role == "Sheriff" then
-                    highlight.FillColor = Color3.fromRGB(0, 0, 255) -- Синий
+                    highlight.FillColor = Color3.fromRGB(0, 0, 255)
                 else
-                    highlight.FillColor = Color3.fromRGB(0, 255, 0) -- Зелёный
+                    highlight.FillColor = Color3.fromRGB(0, 255, 0)
                 end
             end
         end
@@ -111,13 +169,12 @@ end
 
 -- ====== GRAB GUN ======
 local function grabGun()
-    if not grabGunEnabled then return end
-    
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("Tool") and (obj.Name == "Gun" or obj.Name == "Knife") then
             obj.Parent = Character
-            print("🔫 Схватил: " .. obj.Name)
-            grabGunEnabled = false
+            statusLabel.Text = "Статус: 🔫 Схватил " .. obj.Name
+            task.wait(1)
+            statusLabel.Text = "Статус: готово"
             break
         end
     end
@@ -146,7 +203,6 @@ local function fly()
     if Character:FindFirstChild("HumanoidRootPart") then
         local rootPart = Character.HumanoidRootPart
         
-        -- Клавиши управления
         if UserInputService:IsKeyDown(Enum.KeyCode.W) then
             flyDirection = flyDirection + (Camera.CFrame.LookVector * Vector3.new(1, 0, 1)).Unit
         end
@@ -185,63 +241,41 @@ local function bunnyhop()
     end
 end
 
--- ====== МЕНЮ В КОНСОЛИ ======
-print("\n╔════════════════════════════════════════╗")
-print("║  MM2 EXPLOIT МЕНЮ                      ║")
-print("╚════════════════════════════════════════╝\n")
-
-print("🎯 AIMBOT:")
-print("  _G.toggleAimbot() - Вкл/Выкл Aimbot\n")
-
-print("👁️ ROLE HIGHLIGHT:")
-print("  _G.toggleRoleHighlight() - Вкл/Выкл Подсветку ролей\n")
-
-print("🔫 GRAB GUN:")
-print("  _G.grabGun() - Взять оружие\n")
-
-print("👻 NOCLIP:")
-print("  _G.toggleNoclip() - Вкл/Выкл Noclip\n")
-
-print("🛸 FLY:")
-print("  _G.toggleFly() - Вкл/Выкл Полёт")
-print("  Управление: WASD + Space + Ctrl\n")
-
-print("🐰 BUNNYHOP:")
-print("  _G.toggleBunnyhop() - Вкл/Выкл Bunnyhop\n")
-
-print("════════════════════════════════════════\n")
-
--- ====== ФУНКЦИИ ПЕРЕКЛЮЧЕНИЯ ======
-_G.toggleAimbot = function()
+-- ====== ОБРАБОТЧИКИ КНОПОК ======
+aimbotBtn.MouseButton1Click:Connect(function()
     aimbotEnabled = not aimbotEnabled
-    print(aimbotEnabled and "✅ Aimbot: ВКЛ" or "❌ Aimbot: ВЫКЛ")
-end
+    aimbotBtn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(200, 50, 50)
+    statusLabel.Text = aimbotEnabled and "Статус: 🎯 Aimbot ВКЛ" or "Статус: 🎯 Aimbot ВЫКЛ"
+end)
 
-_G.toggleRoleHighlight = function()
+roleBtn.MouseButton1Click:Connect(function()
     roleHighlightEnabled = not roleHighlightEnabled
-    print(roleHighlightEnabled and "✅ Role Highlight: ВКЛ" or "❌ Role Highlight: ВЫКЛ")
-end
+    roleBtn.BackgroundColor3 = roleHighlightEnabled and Color3.fromRGB(100, 200, 255) or Color3.fromRGB(50, 100, 200)
+    statusLabel.Text = roleHighlightEnabled and "Статус: 👁️ Roles ВКЛ" or "Статус: 👁️ Roles ВЫКЛ"
+end)
 
-_G.toggleNoclip = function()
-    noclipEnabled = not noclipEnabled
-    print(noclipEnabled and "✅ Noclip: ВКЛ" or "❌ Noclip: ВЫКЛ")
-end
-
-_G.toggleFly = function()
-    flyEnabled = not flyEnabled
-    print(flyEnabled and "✅ Fly: ВКЛ" or "❌ Fly: ВЫКЛ")
-end
-
-_G.toggleBunnyhop = function()
-    bunnyhopEnabled = not bunnyhopEnabled
-    print(bunnyhopEnabled and "✅ Bunnyhop: ВКЛ" or "❌ Bunnyhop: ВЫКЛ")
-end
-
-_G.grabGun = function()
-    grabGunEnabled = true
+grabBtn.MouseButton1Click:Connect(function()
+    statusLabel.Text = "Статус: 🔫 Ищу оружие..."
     grabGun()
-    print("🔫 Попытка взять оружие...")
-end
+end)
+
+noclipBtn.MouseButton1Click:Connect(function()
+    noclipEnabled = not noclipEnabled
+    noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(100, 200, 100)
+    statusLabel.Text = noclipEnabled and "Статус: 👻 Noclip ВКЛ" or "Статус: 👻 Noclip ВЫКЛ"
+end)
+
+flyBtn.MouseButton1Click:Connect(function()
+    flyEnabled = not flyEnabled
+    flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(255, 100, 255) or Color3.fromRGB(200, 100, 200)
+    statusLabel.Text = flyEnabled and "Статус: 🛸 Fly ВКЛ" or "Статус: 🛸 Fly ВЫКЛ"
+end)
+
+bunnyhopBtn.MouseButton1Click:Connect(function()
+    bunnyhopEnabled = not bunnyhopEnabled
+    bunnyhopBtn.BackgroundColor3 = bunnyhopEnabled and Color3.fromRGB(255, 255, 100) or Color3.fromRGB(255, 200, 50)
+    statusLabel.Text = bunnyhopEnabled and "Статус: 🐰 Bunnyhop ВКЛ" or "Статус: 🐰 Bunnyhop ВЫКЛ"
+end)
 
 -- ====== ОСНОВНОЙ ЦИКЛ ======
 RunService.RenderStepped:Connect(function()
@@ -254,22 +288,8 @@ RunService.RenderStepped:Connect(function()
         if bunnyhopEnabled and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
             bunnyhop()
         end
-    else
-        print("⚠️ Персонаж умер или не найден!")
     end
 end)
 
--- ====== ГОРЯЧИЕ КЛАВИШИ ======
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    
-    if input.KeyCode == Enum.KeyCode.F1 then _G.toggleAimbot() end
-    if input.KeyCode == Enum.KeyCode.F2 then _G.toggleRoleHighlight() end
-    if input.KeyCode == Enum.KeyCode.F3 then _G.grabGun() end
-    if input.KeyCode == Enum.KeyCode.F4 then _G.toggleNoclip() end
-    if input.KeyCode == Enum.KeyCode.F5 then _G.toggleFly() end
-    if input.KeyCode == Enum.KeyCode.F6 then _G.toggleBunnyhop() end
-end)
-
-print("🎮 Нажми F1-F6 для быстрого переключения функций!")
-print("💡 Или используй команды из меню выше!\n")
+print("✅ MM2 Exploit готов!")
+print("🎮 Нажимай кнопки на экране для управления!")
