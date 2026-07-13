@@ -24,67 +24,132 @@ local grabGunEnabled = false
 local playerRoles = {}
 local highlightedPlayers = {}
 
+-- Переменные для перемещения меню
+local dragging = false
+local dragStart = nil
+local dragOffset = nil
+
 -- ====== СОЗДАЁМ GUI ======
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MM2ExploitGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = Player:WaitForChild("PlayerGui")
 
--- Главное меню (Frame с кнопками)
+-- Главное меню (Frame с кнопками) - УМЕНЬШЕНО В 2 РАЗА
 local menuFrame = Instance.new("Frame")
 menuFrame.Name = "MenuFrame"
-menuFrame.Size = UDim2.new(0, 280, 0, 450)
-menuFrame.Position = UDim2.new(0, 10, 0.5, -225)
+menuFrame.Size = UDim2.new(0, 140, 0, 225)
+menuFrame.Position = UDim2.new(0, 10, 0.5, -112)
 menuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
 menuFrame.BorderSizePixel = 2
 menuFrame.BorderColor3 = Color3.fromRGB(255, 50, 100)
 menuFrame.Parent = screenGui
 
--- Заголовок меню
+-- Функция для перемещения меню (Drag and Drop)
+local function makeDraggable(frame)
+    frame.InputBegan:Connect(function(input, gameProcessed)
+        if gameProcessed then return end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            dragOffset = frame.AbsolutePosition - input.Position
+        end
+    end)
+
+    frame.InputEnded:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input, gameProcessed)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+            frame.Position = UDim2.new(0, input.Position.X + dragOffset.X, 0, input.Position.Y + dragOffset.Y)
+        end
+    end)
+end
+
+makeDraggable(menuFrame)
+
+-- Заголовок меню с кнопкой закрытия
+local titleFrame = Instance.new("Frame")
+titleFrame.Name = "TitleFrame"
+titleFrame.Size = UDim2.new(1, 0, 0, 30)
+titleFrame.Position = UDim2.new(0, 0, 0, 0)
+titleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+titleFrame.BorderSizePixel = 0
+titleFrame.Parent = menuFrame
+
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(1, 0, 0, 50)
-titleLabel.Position = UDim2.new(0, 0, 0, 0)
-titleLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+titleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+titleLabel.Position = UDim2.new(0, 5, 0, 0)
+titleLabel.BackgroundTransparency = 1
 titleLabel.TextColor3 = Color3.fromRGB(255, 50, 100)
-titleLabel.TextSize = 20
+titleLabel.TextSize = 14
 titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Text = "🎮 MM2 EXPLOIT"
-titleLabel.Parent = menuFrame
+titleLabel.Text = "MM2"
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = titleFrame
+
+-- Кнопка закрытия меню
+local closeBtn = Instance.new("TextButton")
+closeBtn.Name = "CloseBtn"
+closeBtn.Size = UDim2.new(0, 25, 1, 0)
+closeBtn.Position = UDim2.new(0.75, 0, 0, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextSize = 16
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.Text = "✕"
+closeBtn.Parent = titleFrame
+
+-- Кнопка открытия меню (видна только когда меню закрыто)
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ToggleBtn"
+toggleBtn.Size = UDim2.new(0, 40, 0, 40)
+toggleBtn.Position = UDim2.new(0, 10, 0.5, -20)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 100)
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextSize = 18
+toggleBtn.Font = Enum.Font.GothamBold
+toggleBtn.Text = "📋"
+toggleBtn.Visible = false
+toggleBtn.Parent = screenGui
 
 -- Функция создания кнопки
 local function createButton(name, position, color, parent)
     local button = Instance.new("TextButton")
     button.Name = name
-    button.Size = UDim2.new(0.9, 0, 0, 50)
+    button.Size = UDim2.new(0.9, 0, 0, 25)
     button.Position = position
     button.BackgroundColor3 = color
     button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 16
+    button.TextSize = 10
     button.Font = Enum.Font.GothamBold
     button.Text = name
     button.Parent = parent
     return button
 end
 
--- Создаём кнопки
-local aimbotBtn = createButton("🎯 AIMBOT", UDim2.new(0.05, 0, 0, 60), Color3.fromRGB(200, 50, 50), menuFrame)
-local roleBtn = createButton("👁️ ROLES", UDim2.new(0.05, 0, 0, 120), Color3.fromRGB(50, 100, 200), menuFrame)
-local grabBtn = createButton("🔫 GRAB GUN", UDim2.new(0.05, 0, 0, 180), Color3.fromRGB(200, 150, 50), menuFrame)
-local noclipBtn = createButton("👻 NOCLIP", UDim2.new(0.05, 0, 0, 240), Color3.fromRGB(100, 200, 100), menuFrame)
-local flyBtn = createButton("🛸 FLY", UDim2.new(0.05, 0, 0, 300), Color3.fromRGB(200, 100, 200), menuFrame)
-local bunnyhopBtn = createButton("🐰 BUNNYHOP", UDim2.new(0.05, 0, 0, 360), Color3.fromRGB(255, 200, 50), menuFrame)
+-- Создаём кнопки (позиции адаптированы для уменьшенного меню)
+local aimbotBtn = createButton("🎯 AIM", UDim2.new(0.05, 0, 0, 35), Color3.fromRGB(200, 50, 50), menuFrame)
+local roleBtn = createButton("👁️ ROLE", UDim2.new(0.05, 0, 0, 62), Color3.fromRGB(50, 100, 200), menuFrame)
+local grabBtn = createButton("🔫 GUN", UDim2.new(0.05, 0, 0, 89), Color3.fromRGB(200, 150, 50), menuFrame)
+local noclipBtn = createButton("👻 NO", UDim2.new(0.05, 0, 0, 116), Color3.fromRGB(100, 200, 100), menuFrame)
+local flyBtn = createButton("🛸 FLY", UDim2.new(0.05, 0, 0, 143), Color3.fromRGB(200, 100, 200), menuFrame)
+local bunnyhopBtn = createButton("🐰 JUMP", UDim2.new(0.05, 0, 0, 170), Color3.fromRGB(255, 200, 50), menuFrame)
 
 -- Статус дисплей
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Name = "Status"
-statusLabel.Size = UDim2.new(0.9, 0, 0, 35)
-statusLabel.Position = UDim2.new(0.05, 0, 0, 410)
+statusLabel.Size = UDim2.new(0.9, 0, 0, 15)
+statusLabel.Position = UDim2.new(0.05, 0, 0, 200)
 statusLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
-statusLabel.TextSize = 12
+statusLabel.TextSize = 9
 statusLabel.Font = Enum.Font.Gotham
-statusLabel.Text = "Статус: готово"
+statusLabel.Text = "Готово"
 statusLabel.Parent = menuFrame
 
 -- ====== AIMBOT ======
@@ -172,9 +237,9 @@ local function grabGun()
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("Tool") and (obj.Name == "Gun" or obj.Name == "Knife") then
             obj.Parent = Character
-            statusLabel.Text = "Статус: 🔫 Схватил " .. obj.Name
+            statusLabel.Text = "🔫 Схватил!"
             task.wait(1)
-            statusLabel.Text = "Статус: готово"
+            statusLabel.Text = "Готово"
             break
         end
     end
@@ -241,40 +306,53 @@ local function bunnyhop()
     end
 end
 
+-- ====== ОБРАБОТЧИКИ КНОПОК ЗАКРЫТИЯ/ОТКРЫТИЯ ======
+closeBtn.MouseButton1Click:Connect(function()
+    menuFrame.Visible = false
+    toggleBtn.Visible = true
+    statusLabel.Text = "Меню закрыто"
+end)
+
+toggleBtn.MouseButton1Click:Connect(function()
+    menuFrame.Visible = true
+    toggleBtn.Visible = false
+    statusLabel.Text = "Меню открыто"
+end)
+
 -- ====== ОБРАБОТЧИКИ КНОПОК ======
 aimbotBtn.MouseButton1Click:Connect(function()
     aimbotEnabled = not aimbotEnabled
     aimbotBtn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(200, 50, 50)
-    statusLabel.Text = aimbotEnabled and "Статус: 🎯 Aimbot ВКЛ" or "Статус: 🎯 Aimbot ВЫКЛ"
+    statusLabel.Text = aimbotEnabled and "AIM: ВКЛ" or "AIM: ВЫКЛ"
 end)
 
 roleBtn.MouseButton1Click:Connect(function()
     roleHighlightEnabled = not roleHighlightEnabled
     roleBtn.BackgroundColor3 = roleHighlightEnabled and Color3.fromRGB(100, 200, 255) or Color3.fromRGB(50, 100, 200)
-    statusLabel.Text = roleHighlightEnabled and "Статус: 👁️ Roles ВКЛ" or "Статус: 👁️ Roles ВЫКЛ"
+    statusLabel.Text = roleHighlightEnabled and "ROLE: ВКЛ" or "ROLE: ВЫКЛ"
 end)
 
 grabBtn.MouseButton1Click:Connect(function()
-    statusLabel.Text = "Статус: 🔫 Ищу оружие..."
+    statusLabel.Text = "Ищу оружие..."
     grabGun()
 end)
 
 noclipBtn.MouseButton1Click:Connect(function()
     noclipEnabled = not noclipEnabled
     noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(100, 200, 100)
-    statusLabel.Text = noclipEnabled and "Статус: 👻 Noclip ВКЛ" or "Статус: 👻 Noclip ВЫКЛ"
+    statusLabel.Text = noclipEnabled and "NO: ВКЛ" or "NO: ВЫКЛ"
 end)
 
 flyBtn.MouseButton1Click:Connect(function()
     flyEnabled = not flyEnabled
     flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(255, 100, 255) or Color3.fromRGB(200, 100, 200)
-    statusLabel.Text = flyEnabled and "Статус: 🛸 Fly ВКЛ" or "Статус: 🛸 Fly ВЫКЛ"
+    statusLabel.Text = flyEnabled and "FLY: ВКЛ" or "FLY: ВЫКЛ"
 end)
 
 bunnyhopBtn.MouseButton1Click:Connect(function()
     bunnyhopEnabled = not bunnyhopEnabled
     bunnyhopBtn.BackgroundColor3 = bunnyhopEnabled and Color3.fromRGB(255, 255, 100) or Color3.fromRGB(255, 200, 50)
-    statusLabel.Text = bunnyhopEnabled and "Статус: 🐰 Bunnyhop ВКЛ" or "Статус: 🐰 Bunnyhop ВЫКЛ"
+    statusLabel.Text = bunnyhopEnabled and "JUMP: ВКЛ" or "JUMP: ВЫКЛ"
 end)
 
 -- ====== ОСНОВНОЙ ЦИКЛ ======
@@ -293,3 +371,4 @@ end)
 
 print("✅ MM2 Exploit готов!")
 print("🎮 Нажимай кнопки на экране для управления!")
+print("📋 Кнопка меню закрытия справа в заголовке")
