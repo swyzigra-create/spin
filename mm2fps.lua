@@ -1,465 +1,616 @@
--- MM2 Exploit для Delta Injector (Мобила с GUI кнопками)
--- Функции: Aimbot, Role Highlight, Grab Gun, Noclip, Fly, Bunnyhop
+--<>----<>----<>----<>----<>----<>----<>--
+repeat wait() until game:IsLoaded() wait()
+    game:GetService("Players").LocalPlayer.Idled:connect(function()
+    game:GetService("VirtualUser"):ClickButton2(Vector2.new());
+end);
+--<>----<>----<>----<>----<>----<>----<>--
+local Library = loadstring(game:HttpGetAsync("https://raw.githubusercontent.com/Drifter0507/Shamrock/main/MainLibrary", true))();
+--<>----<>----<>----<>----<>----<>----<>--
+pcall(function()
+    for i, v in pairs(getconnections(game:GetService("ScriptContext").Error)) do
+        v:Disable();
+    end;
+end);
+--<>----<>----<>----<>----<>----<>----<>--
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
+--<>----<>----<>----<>----<>----<>----<>--
+local Workspace = game:GetService('Workspace');
+local ReplicatedStorage = game:GetService('ReplicatedStorage');
+local Players = game:GetService('Players');
+local Client = Players.LocalPlayer;
+local RunService = game:GetService('RunService');
+local Workspace = game:GetService("Workspace");
+local Lighting = game:GetService("Lighting");
+local UIS = game:GetService("UserInputService");
+local Teams = game:GetService("Teams");
+local ScriptContext = game:GetService("ScriptContext");
+local CoreGui = game:GetService("CoreGui");
+local Camera = Workspace.CurrentCamera;
+local Mouse = Client:GetMouse();
+local Terrain = Workspace.Terrain;
+local VirtualUser = game:GetService("VirtualUser");
+--<>----<>----<>----<>----<>----<>----<>--
+local Modules = ReplicatedStorage.Modules;
+local EmoteModule = Modules.EmoteModule;
+local Emotes = Client.PlayerGui.MainGUI.Game:FindFirstChild("Emotes");
+local EmoteList = {"headless","zombie","zen","ninja","floss","dab"};
+local CanGrab 
+CanGrab = false;
 
-local Player = Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
-local Camera = workspace.CurrentCamera
+local Origins = {{2,0,0},{-2,0,0},{0,2,0},{0,-2,0},{0,0,1},{0,0,-1}};
 
-print("✅ MM2 Exploit загружен!")
+local GunHighlight = Instance.new("Highlight");
+local GunHandleAdornment = Instance.new("SphereHandleAdornment");
 
--- Переменные для функций
-local aimbotEnabled = false
-local roleHighlightEnabled = false
-local noclipEnabled = false
-local flyEnabled = false
-local bunnyhopEnabled = false
-local grabGunEnabled = false
+GunHighlight.FillColor = Color3.fromRGB(248, 241, 174);
+GunHighlight.Adornee = Workspace:FindFirstChild("GunDrop");
+GunHighlight.OutlineTransparency = 1;
+GunHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop;
+GunHighlight.RobloxLocked = true;
 
--- Таблицы для хранения информации
-local playerRoles = {}
-local highlightedPlayers = {}
+GunHandleAdornment.Color3 = Color3.fromRGB(248, 241, 174);
+GunHandleAdornment.Transparency = 0.2;
+GunHandleAdornment.Adornee = Workspace:FindFirstChild("GunDrop");
+GunHandleAdornment.AlwaysOnTop = true;
+GunHandleAdornment.AdornCullingMode = Enum.AdornCullingMode.Never;
+GunHandleAdornment.RobloxLocked = true;
 
--- Переменные для перемещения меню
-local dragging = false
-local dragStart = nil
-local dragOffset = nil
+GunHighlight.Parent = CoreGui;
+GunHandleAdornment.Parent = CoreGui;
 
--- ====== СОЗДАЁМ GUI ======
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "MM2ExploitGui"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = Player:WaitForChild("PlayerGui")
+local TeleportDict = {
+    ["Lobby"] = Vector3.new(-121.12338256836, 138.27394104004, 38.946128845215),
+    ["Map"] = Vector3.new(-107.90824127197266, 138.34988403320312, -10.622464179992676),
+};
+local TeleportTable = {}
+for i, v in pairs(TeleportDict) do
+    table.insert(TeleportTable,i);
+end;
 
--- Главное меню (Frame с кнопками) - УМЕНЬШЕНО В 2 РАЗА
-local menuFrame = Instance.new("Frame")
-menuFrame.Name = "MenuFrame"
-menuFrame.Size = UDim2.new(0, 140, 0, 225)
-menuFrame.Position = UDim2.new(0, 10, 0.5, -112)
-menuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-menuFrame.BorderSizePixel = 2
-menuFrame.BorderColor3 = Color3.fromRGB(255, 50, 100)
-menuFrame.Parent = screenGui
+local Murderer, Sheriff = nil, nil;
 
--- Функция для перемещения меню (Drag and Drop)
-local function makeDraggable(frame)
-    frame.InputBegan:Connect(function(input, gameProcessed)
-        if gameProcessed then return end
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            dragOffset = frame.AbsolutePosition - input.Position
-        end
-    end)
+function GetMurderer()
+    for i,v in pairs(Players:GetChildren()) do 
+        if v.Backpack:FindFirstChild("Knife") or v.Character:FindFirstChild("Knife") and v.Name == "Tool" then
+            return v.Name;
+        end;
+    end;
+    return nil;
+end;
 
-    frame.InputEnded:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
+function GetSheriff()
+    for i,v in pairs(Players:GetChildren()) do 
+        if v.Backpack:FindFirstChild("Gun") or v.Character:FindFirstChild("Gun") and v.Name == "Tool" then
+            return v.Name;
+        end;
+        return nil;
+    end;
+end;
+--<>----<>----<>----<>----<>----<>----<>--
+local Character = nil;
+local RootPart = nil;
+local Humanoid = nil;
 
-    UserInputService.InputChanged:Connect(function(input, gameProcessed)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-            frame.Position = UDim2.new(0, input.Position.X + dragOffset.X, 0, input.Position.Y + dragOffset.Y)
-        end
-    end)
-end
+getgenv().WS = 16
+getgenv().JP = 50
+function SetCharVars()
+	Character = Client.Character;
+	Humanoid = Character:FindFirstChild("Humanoid") or Character:WaitForChild("Humanoid");
+	RootPart = Character:FindFirstChild("HumanoidRootPart") or Character:WaitForChild("HumanoidRootPart");
+	if getgenv().Speed then
+		Humanoid.WalkSpeed = getgenv().WS;
+	end;
+	Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		if getgenv().Speed then
+			Humanoid.WalkSpeed = getgenv().WS;
+		end;
+	end);
+    if getgenv().Jump then
+		Humanoid.WalkSpeed = getgenv().JP;
+	end;
+	Humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(function()
+		if getgenv().Jump then
+			Humanoid.WalkSpeed = getgenv().JP;
+		end;
+	end);
+end;
+SetCharVars();
+Client.CharacterAdded:Connect(SetCharVars);
 
-makeDraggable(menuFrame)
+local Ws;
+Ws = hookmetamethod(game, "__index", function(self, Value)
+    if tostring(self) == "Humanoid" and tostring(Value) == "WalkSpeed" then
+        return 16;
+    end;
+    return Ws(self, Value);
+end);
 
--- Заголовок меню с кнопкой закрытия
-local titleFrame = Instance.new("Frame")
-titleFrame.Name = "TitleFrame"
-titleFrame.Size = UDim2.new(1, 0, 0, 30)
-titleFrame.Position = UDim2.new(0, 0, 0, 0)
-titleFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-titleFrame.BorderSizePixel = 0
-titleFrame.Parent = menuFrame
+local Jp;
+Jp = hookmetamethod(game, "__index", function(self, Value)
+    if tostring(self) == "Humanoid" and tostring(Value) == "WalkSpeed" then
+        return 16;
+    end;
+    return Jp(self, Value);
+end);
 
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Name = "Title"
-titleLabel.Size = UDim2.new(0.7, 0, 1, 0)
-titleLabel.Position = UDim2.new(0, 5, 0, 0)
-titleLabel.BackgroundTransparency = 1
-titleLabel.TextColor3 = Color3.fromRGB(255, 50, 100)
-titleLabel.TextSize = 14
-titleLabel.Font = Enum.Font.GothamBold
-titleLabel.Text = "MM2"
-titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-titleLabel.Parent = titleFrame
+--<>----<>----<>----<>----<>----<>----<>--
 
--- Кнопка закрытия меню
-local closeBtn = Instance.new("TextButton")
-closeBtn.Name = "CloseBtn"
-closeBtn.Size = UDim2.new(0, 25, 1, 0)
-closeBtn.Position = UDim2.new(0.75, 0, 0, 0)
-closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-closeBtn.TextSize = 16
-closeBtn.Font = Enum.Font.GothamBold
-closeBtn.Text = "✕"
-closeBtn.Parent = titleFrame
+--<>----<>----<>----<>----<>----<>----<>--
+local Window = Library:CreateWindow({Title = "Murder Mystery 2"});
+local Tab1 = Window:CreateTab({Title = "Main", ScrollBar = false});
+local Tab2 = Window:CreateTab({Title = "Economy", ScrollBar = false});
+local Tab3 = Window:CreateTab({Title = "Roles", ScrollBar = false});
 
--- Кнопка открытия меню (видна только когда меню закрыто)
-local toggleBtn = Instance.new("TextButton")
-toggleBtn.Name = "ToggleBtn"
-toggleBtn.Size = UDim2.new(0, 40, 0, 40)
-toggleBtn.Position = UDim2.new(0, 10, 0.5, -20)
-toggleBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 100)
-toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleBtn.TextSize = 18
-toggleBtn.Font = Enum.Font.GothamBold
-toggleBtn.Text = "📋"
-toggleBtn.Visible = false
-toggleBtn.Parent = screenGui
+--<>----<>----<>----<>----<>----<>----<>--
+local ClientSection = Tab1:CreateSection({
+	Title = "Client"
+});
+--<>----<>----<>----<>----<>----<>----<>--
+local WorldSection = Tab1:CreateSection({
+	Title = "World"
+});
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+local AutofarmSection = Tab2:CreateSection({
+	Title = "Autofarm"
+});
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+local MurderSection = Tab3:CreateSection({
+	Title = "Murderer"
+});
+--<>----<>----<>----<>----<>----<>----<>--
+local SheriffSection = Tab3:CreateSection({
+	Title = "Sheriff"
+});
+--<>----<>----<>----<>----<>----<>----<>--
 
--- Функция создания кнопки
-local function createButton(name, position, color, parent)
-    local button = Instance.new("TextButton")
-    button.Name = name
-    button.Size = UDim2.new(0.9, 0, 0, 25)
-    button.Position = position
-    button.BackgroundColor3 = color
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.TextSize = 10
-    button.Font = Enum.Font.GothamBold
-    button.Text = name
-    button.Parent = parent
-    return button
-end
+--<>----<>----<>----<>----<>----<>----<>--
+ClientSection:CreateToggle({
+	Title = "CTRL click tp",
+	Default = false,
+	Callback = function(state)
+        getgenv().ClickTP = state;
+	end;
+});
+Mouse.Button1Down:connect(function()
+    if not game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode.LeftControl) then return end;
+    if not Mouse.Target then return end;
+    if not getgenv().ClickTP then return end;
+    Character:MoveTo(Mouse.Hit.p);
+end)
+--<>----<>----<>----<>----<>----<>----<>--
 
--- Создаём кнопки (позиции адаптированы для уменьшенного меню)
-local aimbotBtn = createButton("🎯 AIM", UDim2.new(0.05, 0, 0, 35), Color3.fromRGB(200, 50, 50), menuFrame)
-local roleBtn = createButton("👁️ ROLE", UDim2.new(0.05, 0, 0, 62), Color3.fromRGB(50, 100, 200), menuFrame)
-local grabBtn = createButton("🔫 GUN", UDim2.new(0.05, 0, 0, 89), Color3.fromRGB(200, 150, 50), menuFrame)
-local noclipBtn = createButton("👻 NO", UDim2.new(0.05, 0, 0, 116), Color3.fromRGB(100, 200, 100), menuFrame)
-local flyBtn = createButton("🛸 FLY", UDim2.new(0.05, 0, 0, 143), Color3.fromRGB(200, 100, 200), menuFrame)
-local bunnyhopBtn = createButton("🐰 JUMP", UDim2.new(0.05, 0, 0, 170), Color3.fromRGB(255, 200, 50), menuFrame)
-
--- Статус дисплей
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Name = "Status"
-statusLabel.Size = UDim2.new(0.9, 0, 0, 15)
-statusLabel.Position = UDim2.new(0.05, 0, 0, 200)
-statusLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
-statusLabel.TextColor3 = Color3.fromRGB(100, 200, 100)
-statusLabel.TextSize = 9
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.Text = "Готово"
-statusLabel.Parent = menuFrame
-
--- ====== AIMBOT ======
-local function getEnemyMurderer()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= Player and player.Character then
-            local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-            if humanoidRootPart and player.Character:FindFirstChild("Humanoid") then
-                if player.Character.Humanoid.Health > 0 then
-                    if playerRoles[player.UserId] == "Murderer" or playerRoles[player.UserId] == "Sheriff" then
-                        return humanoidRootPart
-                    end
-                end
-            end
-        end
+ClientSection:CreateSlider({
+	Title = "WalkSpeed",
+	Min = 16,
+	Max = 200,
+	Default = 16,
+	Callback = function(val)
+		getgenv().WS = tonumber(val)--tonumber(val / 10) or 0;
+        Humanoid.WalkSpeed = val;
     end
-    return nil
-end
-
-local function aimbot()
-    if not aimbotEnabled then return end
-    
-    local target = getEnemyMurderer()
-    if target then
-        local direction = (target.Position - Camera.CFrame.Position).Unit
-        Camera.CFrame = CFrame.new(Camera.CFrame.Position, Camera.CFrame.Position + direction)
+});
+--<>----<>----<>----<>----<>----<>----<>--
+ClientSection:CreateSlider({
+	Title = "JumpPower",
+	Min = 50,
+	Max = 200,
+	Default = 50,
+	Callback = function(val)
+		getgenv().JP = tonumber(val)--tonumber(val / 10) or 0;
+        Humanoid.JumpPower = val;
     end
-end
+});
+--<>----<>----<>----<>----<>----<>----<>--
+local c;
+local h;
+local bv;
+local bav;
+local cam;
+local flying;
+local p = Client;
+local buttons = {W = false, S = false, A = false, D = false, Moving = false};
 
--- ====== ROLE HIGHLIGHT (ESP) - СРАЗУ ВКЛЮЧАЕТСЯ ======
-local function updateRoles()
-    for _, player in pairs(Players:GetPlayers()) do
-        if player.Character then
-            local humanoid = player.Character:FindFirstChild("Humanoid")
-            if humanoid then
-                if player:FindFirstChild("Role") then
-                    playerRoles[player.UserId] = player.Role.Value
-                else
-                    if player.Character:FindFirstChild("Knife") then
-                        playerRoles[player.UserId] = "Murderer"
-                    elseif player.Character:FindFirstChild("Gun") then
-                        playerRoles[player.UserId] = "Sheriff"
-                    else
-                        playerRoles[player.UserId] = "Innocent"
-                    end
-                end
-            end
-        end
-    end
-end
+local StartFly = function ()
+    if not Client.Character or not Character.Head or flying then return end;
+    c = Character;
+    h = Humanoid;
+    h.PlatformStand = true;
+    cam = workspace:WaitForChild('Camera');
+    bv = Instance.new("BodyVelocity");
+    bav = Instance.new("BodyAngularVelocity");
+    bv.Velocity, bv.MaxForce, bv.P = Vector3.new(0, 0, 0), Vector3.new(10000, 10000, 10000), 1000;
+    bav.AngularVelocity, bav.MaxTorque, bav.P = Vector3.new(0, 0, 0), Vector3.new(10000, 10000, 10000), 1000;
+    bv.Parent = c.Head;
+    bav.Parent = c.Head;
+    flying = true;
+    h.Died:connect(function() flying = false end);
+end;
 
-local function roleHighlight()
-    updateRoles()
-    
-    for _, player in pairs(Players:GetPlayers()) do
-        if player.Character then
-            local humanoidRootPart = player.Character:FindFirstChild("HumanoidRootPart")
-            
-            if humanoidRootPart then
-                local role = playerRoles[player.UserId] or "Unknown"
-                
-                -- ВСЕГДА подсвечиваем убийцу и шерифа
-                if role == "Murderer" or role == "Sheriff" then
-                    if not highlightedPlayers[player.UserId] then
-                        local highlight = Instance.new("Highlight")
-                        highlight.Parent = player.Character
-                        highlightedPlayers[player.UserId] = highlight
-                    end
-                    
-                    local highlight = highlightedPlayers[player.UserId]
-                    
-                    if role == "Murderer" then
-                        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-                        highlight.FillTransparency = 0.2
-                        highlight.OutlineTransparency = 0
-                    elseif role == "Sheriff" then
-                        highlight.FillColor = Color3.fromRGB(0, 0, 255)
-                        highlight.FillTransparency = 0.2
-                        highlight.OutlineTransparency = 0
-                    end
-                end
-            end
-        end
-    end
-end
+local EndFly = function ()
+    if not p.Character or not flying then return end
+    h.PlatformStand = false;
+    bv:Destroy();
+    bav:Destroy();
+    flying = false;
+end;
 
--- ====== GRAB GUN (ИСПРАВЛЕНО - БЕРЁТ ПИСТОЛЕТ ШЕРИФА) ======
-local function grabGun()
-    updateRoles()
-    
-    -- Ищем мёртвого шерифа или живого шерифа
-    local sheriffPlayer = nil
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= Player and player.Character then
-            local role = playerRoles[player.UserId]
-            if role == "Sheriff" then
-                sheriffPlayer = player
-                break
-            end
-        end
-    end
-    
-    if sheriffPlayer and sheriffPlayer.Character then
-        local sheriffRootPart = sheriffPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local playerRootPart = Character:FindFirstChild("HumanoidRootPart")
-        
-        if sheriffRootPart and playerRootPart then
-            -- Ищем пистолет шерифа
-            local gunFound = false
-            
-            -- Сначала ищем в персонаже шерифа
-            for _, obj in pairs(sheriffPlayer.Character:GetChildren()) do
-                if obj:IsA("Tool") and obj.Name == "Gun" then
-                    obj.Parent = Character
-                    statusLabel.Text = "🔫 Пистолет!"
-                    task.wait(1)
-                    statusLabel.Text = "Готово"
-                    gunFound = true
-                    break
-                end
-            end
-            
-            -- Если не нашли в персонаже, ищем на земле возле шерифа
-            if not gunFound then
-                for _, obj in pairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Tool") and obj.Name == "Gun" then
-                        local gunPos = obj:FindFirstChild("Handle")
-                        if gunPos then
-                            local distance = (gunPos.Position - sheriffRootPart.Position).Magnitude
-                            if distance < 50 then
-                                -- Телепортируемся к пистолету
-                                playerRootPart.CFrame = gunPos.CFrame + Vector3.new(0, 0, 3)
-                                task.wait(0.3)
-                                obj.Parent = Character
-                                statusLabel.Text = "🔫 Взял пистолет!"
-                                task.wait(1)
-                                statusLabel.Text = "Готово"
-                                gunFound = true
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-            
-            if not gunFound then
-                statusLabel.Text = "❌ Пистолет не найден"
-            end
-        end
-    else
-        statusLabel.Text = "❌ Шериф не найден"
-    end
-end
+game:GetService("UserInputService").InputBegan:connect(function (input, GPE) 
+    if GPE then return end;
+    for i, e in pairs(buttons) do
+        if i ~= "Moving" and input.KeyCode == Enum.KeyCode[i] then
+            buttons[i] = true;
+            buttons.Moving = true;
+        end;
+    end;
+end);
 
--- ====== NOCLIP ======
-local function noclip()
-    if not noclipEnabled then return end
-    
-    if Character:FindFirstChild("HumanoidRootPart") then
-        for _, part in pairs(Character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end
-end
+game:GetService("UserInputService").InputEnded:connect(function (input, GPE) 
+    if GPE then return end;
+    local a = false;
+    for i, e in pairs(buttons) do
+        if i ~= "Moving" then
+            if input.KeyCode == Enum.KeyCode[i] then
+                buttons[i] = false;
+            end;
+            if buttons[i] then a = true end;
+        end;
+    end;
+    buttons.Moving = a;
+end);
 
--- ====== FLY (ПОЛНОСТЬЮ ПЕРЕДЕЛАН) ======
-local flySpeed = 100
-local currentFlyVelocity = Vector3.new(0, 0, 0)
+local setVec = function (vec)
+    return vec * ((getgenv().FlySpeed or 50) / vec.Magnitude);
+end;
 
-local function fly()
-    if not flyEnabled then return end
-    
-    if Character:FindFirstChild("HumanoidRootPart") then
-        local rootPart = Character.HumanoidRootPart
-        local moveDirection = Vector3.new(0, 0, 0)
-        
-        -- Получаем направление от камеры
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-            moveDirection = moveDirection + Camera.CFrame.LookVector
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-            moveDirection = moveDirection - Camera.CFrame.LookVector
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-            moveDirection = moveDirection - Camera.CFrame.RightVector
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-            moveDirection = moveDirection + Camera.CFrame.RightVector
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-            moveDirection = moveDirection + Vector3.new(0, 1, 0)
-        end
-        if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
-            moveDirection = moveDirection - Vector3.new(0, 1, 0)
-        end
-        
-        -- Нормализуем и применяем скорость
-        if moveDirection.Magnitude > 0 then
-            moveDirection = moveDirection.Unit * flySpeed
+game:GetService("RunService").Heartbeat:connect(function (step) -- The actual fly function, called every frame
+    if flying and c and c.PrimaryPart then
+        local p = c.PrimaryPart.Position;
+        local cf = cam.CFrame;
+        local ax, ay, az = cf:toEulerAnglesXYZ();
+        c:SetPrimaryPartCFrame(CFrame.new(p.x, p.y, p.z) * CFrame.Angles(ax, ay, az));
+        if buttons.Moving then
+            local t = Vector3.new();
+            if buttons.W then t = t + (setVec(cf.lookVector)) end;
+            if buttons.S then t = t - (setVec(cf.lookVector)) end;
+            if buttons.A then t = t - (setVec(cf.rightVector)) end;
+            if buttons.D then t = t + (setVec(cf.rightVector)) end;
+            c:TranslateBy(t * step);
+        end;
+    end;
+end);
+
+ClientSection:CreateToggle({
+	Title = "Fly",
+	Default = false,
+	Callback = function(state)
+        getgenv().Flying = state;
+        if getgenv().Flying then
+            StartFly();
         else
-            moveDirection = Vector3.new(0, 0, 0)
-        end
-        
-        currentFlyVelocity = moveDirection
-        rootPart.CFrame = rootPart.CFrame + currentFlyVelocity / 60
+            EndFly();
+        end;
+	end
+});
+
+ClientSection:CreateSlider({
+	Title = "Fly speed",
+	Min = 20,
+	Max = 150,
+	Default = 50,
+	Callback = function(val)
+        getgenv().FlySpeed = tonumber(val) or 50;
     end
-end
-
--- ====== BUNNYHOP (УСИЛЕНО) ======
-local lastJumpTime = 0
-local jumpCooldown = 0.3
-
-local function bunnyhop()
-    if not bunnyhopEnabled then return end
-    
-    if Character:FindFirstChild("Humanoid") and Character:FindFirstChild("HumanoidRootPart") then
-        local currentTime = tick()
-        local rootPart = Character.HumanoidRootPart
-        
-        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-            if (currentTime - lastJumpTime) > jumpCooldown then
-                -- Даём обычный прыжок
-                Character.Humanoid:Jump()
-                
-                -- Добавляем BodyVelocity для усиления прыжка
-                if rootPart:FindFirstChild("JumpBoost") then
-                    rootPart.JumpBoost:Destroy()
-                end
-                
-                local bodyVelocity = Instance.new("BodyVelocity")
-                bodyVelocity.Name = "JumpBoost"
-                bodyVelocity.Velocity = Vector3.new(0, 200, 0) -- Очень высокий прыжок
-                bodyVelocity.MaxForce = Vector3.new(0, math.huge, 0)
-                bodyVelocity.Parent = rootPart
-                
-                game:GetService("Debris"):AddItem(bodyVelocity, 0.15)
-                
-                lastJumpTime = currentTime
+});
+--<>----<>----<>----<>----<>----<>----<>--
+ClientSection:CreateButton({
+    Title = "Btools",
+    Callback = function()
+        if not Client.Backpack:FindFirstChildOfClass("HopperBun") then
+            local tool1 = Instance.new("HopperBin",Client.Backpack);
+            local tool2 = Instance.new("HopperBin",Client.Backpack);
+            local tool3 = Instance.new("HopperBin",Client.Backpack);
+            local tool4 = Instance.new("HopperBin",Client.Backpack);
+            local tool5 = Instance.new("HopperBin",Client.Backpack);
+            tool1.BinType = "Clone";
+            tool2.BinType = "GameTool";
+            tool3.BinType = "Hammer";
+            tool4.BinType = "Script";
+            tool5.BinType = "Grab";
+        end
+    end
+})
+--<>----<>----<>----<>----<>----<>----<>--
+local accessories = {}
+function GodMode()
+    if game.Players.LocalPlayer.Character then
+        if game.Players.LocalPlayer.Character:FindFirstChild("Humanoid") then
+            for _, accessory in pairs(game.Players.LocalPlayer.Character.Humanoid:GetAccessories()) do
+                table.insert(accessories, accessory:Clone())
             end
+            game.Players.LocalPlayer.Character.Humanoid.Name = "boop"
         end
+        local v = game.Players.LocalPlayer.Character["boop"]:Clone()
+        v.Parent = game.Players.LocalPlayer.Character
+        v.Name = "Humanoid"
+        wait(0.1)
+        game.Players.LocalPlayer.Character["boop"]:Destroy()
+        workspace.CurrentCamera.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
+        for _, accessory in pairs(accessories) do
+            game.Players.LocalPlayer.Character.Humanoid:AddAccessory(accessory)
+        end
+        game.Players.LocalPlayer.Character.Animate.Disabled = true
+        wait(0.1)
+        game.Players.LocalPlayer.Character.Animate.Disabled = false
     end
 end
 
--- ====== ОБРАБОТЧИКИ КНОПОК ЗАКРЫТИЯ/ОТКРЫТИЯ ======
-closeBtn.MouseButton1Click:Connect(function()
-    menuFrame.Visible = false
-    toggleBtn.Visible = true
-    statusLabel.Text = "Меню закрыто"
-end)
 
-toggleBtn.MouseButton1Click:Connect(function()
-    menuFrame.Visible = true
-    toggleBtn.Visible = false
-    statusLabel.Text = "Меню открыто"
-end)
-
--- ====== ОБРАБОТЧИКИ КНОПОК ======
-aimbotBtn.MouseButton1Click:Connect(function()
-    aimbotEnabled = not aimbotEnabled
-    aimbotBtn.BackgroundColor3 = aimbotEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(200, 50, 50)
-    statusLabel.Text = aimbotEnabled and "AIM: ВКЛ" or "AIM: ВЫКЛ"
-end)
-
-roleBtn.MouseButton1Click:Connect(function()
-    roleHighlightEnabled = not roleHighlightEnabled
-    roleBtn.BackgroundColor3 = roleHighlightEnabled and Color3.fromRGB(100, 200, 255) or Color3.fromRGB(50, 100, 200)
-    statusLabel.Text = roleHighlightEnabled and "ROLE: ВКЛ" or "ROLE: ВЫКЛ"
-end)
-
-grabBtn.MouseButton1Click:Connect(function()
-    statusLabel.Text = "⏳ Ищу пистолет..."
-    grabGun()
-end)
-
-noclipBtn.MouseButton1Click:Connect(function()
-    noclipEnabled = not noclipEnabled
-    noclipBtn.BackgroundColor3 = noclipEnabled and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(100, 200, 100)
-    statusLabel.Text = noclipEnabled and "NO: ВКЛ" or "NO: ВЫКЛ"
-end)
-
-flyBtn.MouseButton1Click:Connect(function()
-    flyEnabled = not flyEnabled
-    currentFlyVelocity = Vector3.new(0, 0, 0)
-    flyBtn.BackgroundColor3 = flyEnabled and Color3.fromRGB(255, 100, 255) or Color3.fromRGB(200, 100, 200)
-    statusLabel.Text = flyEnabled and "FLY: ВКЛ" or "FLY: ВЫКЛ"
-end)
-
-bunnyhopBtn.MouseButton1Click:Connect(function()
-    bunnyhopEnabled = not bunnyhopEnabled
-    bunnyhopBtn.BackgroundColor3 = bunnyhopEnabled and Color3.fromRGB(255, 255, 100) or Color3.fromRGB(255, 200, 50)
-    statusLabel.Text = bunnyhopEnabled and "JUMP: ВКЛ" or "JUMP: ВЫКЛ"
-end)
-
--- ====== ОСНОВНОЙ ЦИКЛ ======
-RunService.RenderStepped:Connect(function()
-    if Character and Character:FindFirstChild("Humanoid") and Character.Humanoid.Health > 0 then
-        -- ESP ВСЕГДА РАБОТАЕТ
-        roleHighlight()
-        
-        -- Остальные функции
-        aimbot()
-        noclip()
-        fly()
-        bunnyhop()
+ClientSection:CreateButton({
+    Title = "Godmode",
+    Callback = function()
+        GodMode()
     end
-end)
+})
 
-print("✅ MM2 Exploit готов!")
-print("🎮 Нажимай кнопки на экране для управления!")
-print("📋 Кнопка меню закрытия справа в заголовке")
-print("👁️ ESP ВКЛЮЧЕН СРАЗУ - ВИДИШЬ КРАСНЫЙ (УБИЙЦА) и СИНИЙ (ШЕРИФ)!")
+ClientSection:CreateButton({
+	Title = "Force respawn",
+	Callback = function(state)
+		Character.Head:Remove();
+		Humanoid.BreakJointsOnDeath = false;
+		Humanoid.Health = 0;
+	end;
+});
+--<>----<>----<>----<>----<>----<>----<>--
+ClientSection:CreateButton({
+    Title = "Get all emotes",
+    Callback = function()
+		require(EmoteModule).GeneratePage(EmoteList,Emotes,'Free Emotes');
+    end
+})
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+
+local folder = Instance.new("Folder",CoreGui);
+folder.Name = "ESP Holder";
+	
+local function AddBillboard(player)
+    local billboard = Instance.new("BillboardGui",folder);
+    billboard.Name = player.Name;
+    billboard.AlwaysOnTop = true;
+    billboard.Size = UDim2.fromOffset(200,50);
+    billboard.ExtentsOffset = Vector3.new(0,3,0);
+    billboard.Enabled = false
+
+    local textLabel = Instance.new("TextLabel",billboard);
+    textLabel.TextSize = 20;
+    textLabel.Text = player.Name;
+    textLabel.Font = Enum.Font.SourceSans;
+    textLabel.BackgroundTransparency = 1;
+    textLabel.Size = UDim2.fromScale(1,1);
+
+    if getgenv().AllEsp then
+        billboard.Enabled = true
+    end
+    repeat
+        wait()
+        pcall(function()
+            billboard.Adornee = player.Character.Head;
+            if player.Character:FindFirstChild("Knife") or player.Backpack:FindFirstChild("Knife") then
+                textLabel.TextColor3 = Color3.new(1,0,0);
+                if not billboard.Enabled and getgenv().MurderEsp then
+                    billboard.Enabled = true
+                end
+            elseif player.Character:FindFirstChild("Gun") or player.Backpack:FindFirstChild("Gun") then
+                textLabel.TextColor3 = Color3.new(0,0,1);
+                if not billboard.Enabled and getgenv().SheriffEsp then
+                    billboard.Enabled = true
+                end
+            else
+                textLabel.TextColor3 = Color3.new(0,1,0);
+            end;
+        end);
+    until not player.Parent;
+end;
+
+for _,player in pairs(Players:GetPlayers()) do
+    if player ~= Client then
+        coroutine.wrap(AddBillboard)(player);
+    end;
+end;
+Players.PlayerAdded:Connect(AddBillboard);
+
+Players.PlayerRemoving:Connect(function(player)
+    folder[player.Name]:Destroy();
+end);
+
+
+WorldSection:CreateToggle({
+	Title = "Player ESP",
+	Default = false,
+	Callback = function(state)
+        getgenv().AllEsp = state;
+        for i, v in pairs(folder:GetChildren()) do
+            if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
+                if getgenv().AllEsp then
+                    v.Enabled = true;
+                else
+                    v.Enabled = false;
+                end;
+            end;
+        end;
+	end
+});
+
+WorldSection:CreateToggle({
+	Title = "Murderer ESP",
+	Default = false,
+	Callback = function(state)
+        getgenv().MurderEsp = state;
+        while getgenv().MurderEsp do
+            wait()
+            pcall(function()
+                for i, v in pairs(folder:GetChildren()) do
+                    if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
+                        if Players[tostring(v.Name)].Character:FindFirstChild("Knife") or Players[tostring(v.Name)].Backpack:FindFirstChild("Knife")  then
+                            if getgenv().MurderEsp then
+                                v.Enabled = true;
+                            else
+                                v.Enabled = false;
+                            end;
+                        end
+                    end;
+                end;
+            end);
+        end;
+	end
+});
+
+WorldSection:CreateToggle({
+	Title = "Sheriff ESP",
+	Default = false,
+	Callback = function(state)
+        getgenv().SheriffEsp = state;
+        while getgenv().SheriffEsp do
+            wait()
+            pcall(function()
+                for i, v in pairs(folder:GetChildren()) do
+                    if v:IsA("BillboardGui") and Players[tostring(v.Name)] then
+                        if Players[tostring(v.Name)].Character:FindFirstChild("Gun") or Players[tostring(v.Name)].Backpack:FindFirstChild("Gun")  then
+                            if getgenv().SheriffEsp then
+                                v.Enabled = true;
+                            else
+                                v.Enabled = false;
+                            end;
+                        end
+                    end;
+                end;
+            end);
+        end;
+	end
+});
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+SheriffSection:CreateToggle({
+	Title = "Gun ESP",
+	Default = false,
+    Order = 50,
+	Callback = function(state)
+        getgenv().GunESP = state;
+	end
+});
+
+coroutine.wrap(function()
+    RunService.RenderStepped:Connect(function()
+        pcall(function()
+            if getgenv().GunESP then
+                local gundrop = Workspace:FindFirstChild("GunDrop");
+                GunHighlight.Adornee = gundrop;
+                GunHandleAdornment.Adornee = gundrop;
+                if gundrop then 
+                    GunHandleAdornment.Size = gundrop.Size + Vector3.new(0.05, 0.05, 0.05) ;
+                end;
+        
+                GunHighlight.Enabled = getgenv().GunESP;
+                GunHandleAdornment.Visible = getgenv().GunESP;
+            end;
+        end);
+    end);
+end)();
+--<>----<>----<>----<>----<>----<>----<>--
+--<>----<>----<>----<>----<>----<>----<>--
+
+function XrayOn(obj)
+    for _,v in pairs(obj:GetChildren()) do
+        if (v:IsA("BasePart")) and not v.Parent:FindFirstChild("Humanoid") then
+            v.LocalTransparencyModifier = 0.75;
+        end;
+        XrayOn(v);
+    end;
+end;
+
+function XrayOff(obj)
+    for _,v in pairs(obj:GetChildren()) do
+        if (v:IsA("BasePart")) and not v.Parent:FindFirstChild("Humanoid") then
+            v.LocalTransparencyModifier = 0;
+        end ;
+        XrayOff(v);
+    end;
+end;
+
+WorldSection:CreateToggle({
+	Title = "Xray",
+	Default = false,
+	Callback = function(state)
+        getgenv().Xray = state;
+        if getgenv().Xray then
+            XrayOn(Workspace);
+        else
+            XrayOff(Workspace);
+        end;
+	end
+});
+--<>----<>----<>----<>----<>----<>----<>--
+WorldSection:CreateButton({
+    Title = "Unlock workspace",
+    Callback = function()
+        function unlock(obj)
+			for i,v in pairs(obj:GetChildren()) do
+				if v:IsA("BasePart") then
+					v.Locked = false;
+				end;
+				unlock(v);
+			end;
+		end;
+		unlock(workspace);
+    end
+})
+--<>----<>----<>----<>----<>----<>----<>--
+WorldSection:CreateDropdown({
+	Text = "Teleports",
+	Array = TeleportTable,
+	Callback = function(val)
+        if val == "Map" then
+            for _,child in pairs(Workspace:GetDescendants()) do
+                if child:IsA("BasePart") and child.Name == "Coin_Server" then
+                    RootPart.CFrame = CFrame.new(child.Parent.Parent.Map:FindFirstChild("Part").Position);
+                end;
+            end;
+        else
+            pcall(function()
+                RootPart.CFrame = CFrame.new(TeleportDict[val]);
+            end)
+        end;
+	end
+})
+--<>----<>----<>----<>----<>----<>----<>--
+AutofarmSection:CreateToggle({
+	Title = "Autofarm",
+	Default = false,
+	Callback = function(state)
+        getgenv().Autofarm = state;
+        if not getgenv().AutofarmMethod then return end;
+        if getgenv().AutofarmMethod == "Coins" then
+            while getgenv().Autofarm do
+                task.wait();
+                local CoinContainer = Workspace:FindFirstChild("CoinContainer", true);
+                if CoinContainer and Client.PlayerGui.MainGUI.Game.CashBag.Visible == true then
+                    local coin = CoinContainer:FindFirstChild("Coin_Server");
+                    if coin then
+                        repeat
+                            RootPart.CFrame = CFrame.new(coin.Position - Vector3.new(0, 2.5, 0)) * CFrame.Angles(0, 0, math.rad(180));
+                            RunService.Stepped:Wait();
+                            if not getgenv().Autofarm then break end;
+                        until not coin:IsDescendantOf(Workspace) or coin.Name ~= "Coin_Server";
+                        task.wait(1.8);
+                    end;
+                else
+                    task.wait(1.5);
+                end;
+            end;
+        else
+            while getgenv().Autofarm do
+                wait();
+                if Client.PlayerGui.MainGUI.Game.CashBag.Vis
