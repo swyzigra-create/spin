@@ -8,7 +8,7 @@ local UserInputService = game:GetService("UserInputService")
 -- ===== КОНФИГУРАЦИЯ =====
 local CONFIG = {
     MAX_COINS = 500,           -- Максимум монет перед ресетом
-    AUTO_FARM_ENABLED = true,  -- Включить автофарм
+    AUTO_FARM_ENABLED = false, -- Включить автофарм (выключено при старте)
     AUTO_RESET_ENABLED = true, -- Включить авто-ресет
     FARM_RANGE = 100,          -- Дальность поиска NPC
     FARM_SPEED = 0.1,          -- Скорость фарма (меньше = быстрее)
@@ -38,6 +38,8 @@ end
 
 -- Получить текущее количество монет
 local function GetCoins()
+    if not Player then return 0 end
+    
     local PlayerStats = Player:FindFirstChild("leaderstats")
     if PlayerStats then
         local CoinsValue = PlayerStats:FindFirstChild("Coins") or PlayerStats:FindFirstChild("Money")
@@ -50,6 +52,8 @@ end
 
 -- Найти ближайший NPC для фарма
 local function FindNearestNPC()
+    if not RootPart then return nil end
+    
     local NPCs = workspace:FindFirstChild("NPCs") or workspace
     local NearestNPC = nil
     local MinDistance = CONFIG.FARM_RANGE
@@ -73,13 +77,16 @@ end
 -- Атаковать NPC (оптимизировано для мобилки)
 local function AttackNPC(npc)
     if not npc or not npc:FindFirstChild("Humanoid") then return end
+    if not Character or not RootPart then return end
     
     local NPCRoot = npc:FindFirstChild("HumanoidRootPart")
     if not NPCRoot then return end
     
     -- Телепортация к NPC
-    RootPart.CFrame = NPCRoot.CFrame + NPCRoot.CFrame.LookVector * 3
-    wait(0.1)
+    pcall(function()
+        RootPart.CFrame = NPCRoot.CFrame + NPCRoot.CFrame.LookVector * 3
+    end)
+    task.wait(0.1)
     
     -- Поиск оружия в инвентаре
     local Backpack = Player:FindFirstChild("Backpack")
@@ -87,68 +94,38 @@ local function AttackNPC(npc)
         local Weapon = Backpack:FindFirstChildWhichIsA("Tool")
         if Weapon then
             Weapon.Parent = Character
-            wait(0.2)
+            task.wait(0.2)
             
             -- Активация атаки
             if Weapon:FindFirstChild("Handle") then
                 local RemoteEvents = Weapon:FindFirstChildWhichIsA("RemoteEvent")
                 if RemoteEvents then
-                    RemoteEvents:FireServer()
+                    pcall(function()
+                        RemoteEvents:FireServer()
+                    end)
                 else
-                    Weapon:Activate()
+                    pcall(function()
+                        Weapon:Activate()
+                    end)
                 end
             end
         end
     end
 end
 
--- Автофарм основной цикл
-local function AutoFarm()
-    if not CONFIG.AUTO_FARM_ENABLED or IsFarming then return end
-    
-    IsFarming = true
-    Log("Автофарм начат!")
-    
-    while CONFIG.AUTO_FARM_ENABLED and Character and Humanoid.Health > 0 do
-        CurrentCoins = GetCoins()
-        
-        -- Проверка на максимум монет
-        if CONFIG.AUTO_RESET_ENABLED and CurrentCoins >= CONFIG.MAX_COINS then
-            Log("Достигнут максимум монет (" .. CurrentCoins .. "). Выполняю ресет...")
-            UpdateUI()
-            ResetGame()
-            wait(3)
-        end
-        
-        -- Поиск и атака NPC
-        local NearestNPC = FindNearestNPC()
-        if NearestNPC then
-            AttackNPC(NearestNPC)
-        end
-        
-        wait(CONFIG.FARM_SPEED)
-        
-        -- Обновление персонажа если он умер
-        if Humanoid.Health <= 0 then
-            Character = Player.Character or Player.CharacterAdded:Wait()
-            Humanoid = Character:WaitForChild("Humanoid")
-            RootPart = Character:WaitForChild("HumanoidRootPart")
-            wait(1)
-        end
-    end
-    
-    IsFarming = false
-end
-
 -- Ресет игры
 local function ResetGame()
+    if not Player then return end
+    
     local Stats = Player:FindFirstChild("leaderstats")
     if Stats then
         local ResetEvent = workspace:FindFirstChild("ResetEvent") or 
                           game:GetService("ReplicatedStorage"):FindFirstChild("ResetEvent")
         
         if ResetEvent then
-            ResetEvent:FireServer()
+            pcall(function()
+                ResetEvent:FireServer()
+            end)
             Log("Ресет выполнен")
         else
             if Character and Humanoid then
@@ -157,6 +134,42 @@ local function ResetGame()
             end
         end
     end
+end
+
+-- Автофарм основной цикл
+local function AutoFarm()
+    Log("Автофарм начат!")
+    
+    while CONFIG.AUTO_FARM_ENABLED do
+        if not Character or not Humanoid or Humanoid.Health <= 0 then
+            Character = Player.Character or Player.CharacterAdded:Wait()
+            Humanoid = Character:WaitForChild("Humanoid")
+            RootPart = Character:WaitForChild("HumanoidRootPart")
+            task.wait(1)
+        end
+        
+        if CONFIG.AUTO_FARM_ENABLED then
+            CurrentCoins = GetCoins()
+            
+            -- Проверка на максимум монет
+            if CONFIG.AUTO_RESET_ENABLED and CurrentCoins >= CONFIG.MAX_COINS then
+                Log("Достигнут максимум монет (" .. CurrentCoins .. "). Выполняю ресет...")
+                UpdateUI()
+                ResetGame()
+                task.wait(3)
+            end
+            
+            -- Поиск и атака NPC
+            local NearestNPC = FindNearestNPC()
+            if NearestNPC then
+                AttackNPC(NearestNPC)
+            end
+        end
+        
+        task.wait(CONFIG.FARM_SPEED)
+    end
+    
+    Log("Автофарм остановлен")
 end
 
 -- ===== МОБИЛЬНЫЙ UI С СКЛАДНЫМ МЕНЮ =====
@@ -174,7 +187,7 @@ local function AnimatePanel(panel, targetSize, duration)
             startSize.Y.Scale + (targetSize.Y.Scale - startSize.Y.Scale) * progress,
             startSize.Y.Offset + (targetSize.Y.Offset - startSize.Y.Offset) * progress
         )
-        wait(0.016)
+        task.wait(0.016)
     end
     panel.Size = targetSize
 end
@@ -184,6 +197,23 @@ local function SetChildrenVisible(parent, visible)
     for _, child in pairs(parent:GetChildren()) do
         if child.Name ~= "Title" and child.Name ~= "ToggleButton" then
             child.Visible = visible
+        end
+    end
+end
+
+-- Обновить UI
+local function UpdateUI()
+    if UIPanel then
+        UIPanel.CoinsLabel.Text = "💰 " .. CurrentCoins .. "/" .. CONFIG.MAX_COINS
+        
+        if CONFIG.AUTO_FARM_ENABLED then
+            UIPanel.StatusLabel.Text = "📊 АКТИВЕН ✓"
+            UIPanel.FarmButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+            UIPanel.FarmButton.Text = "⏸ СТОП"
+        else
+            UIPanel.StatusLabel.Text = "📊 ВЫКЛЮЧЕН"
+            UIPanel.FarmButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            UIPanel.FarmButton.Text = "▶ ФАРМ"
         end
     end
 end
@@ -258,7 +288,7 @@ local function CreateUI()
     FarmButton.Name = "FarmButton"
     FarmButton.Size = UDim2.new(0.45, -2, 0, 28)
     FarmButton.Position = UDim2.new(0, 3, 0, 102)
-    FarmButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    FarmButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
     FarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
     FarmButton.TextSize = 9
     FarmButton.Font = Enum.Font.GothamBold
@@ -334,14 +364,7 @@ local function CreateUI()
     -- Обработчики кнопок
     FarmButton.TouchTap:Connect(function()
         CONFIG.AUTO_FARM_ENABLED = not CONFIG.AUTO_FARM_ENABLED
-        if CONFIG.AUTO_FARM_ENABLED then
-            FarmButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
-            FarmButton.Text = "⏸ ФАРМ"
-            AutoFarm()
-        else
-            FarmButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-            FarmButton.Text = "▶ ФАРМ"
-        end
+        UpdateUI()
         Log("Фарм: " .. (CONFIG.AUTO_FARM_ENABLED and "ВКЛЮЧЕН" or "ВЫКЛЮЧЕН"))
     end)
     
@@ -372,30 +395,23 @@ local function CreateUI()
     }
 end
 
--- Обновить UI
-local function UpdateUI()
-    if UIPanel then
-        UIPanel.CoinsLabel.Text = "💰 " .. CurrentCoins .. "/" .. CONFIG.MAX_COINS
-        
-        if CONFIG.AUTO_FARM_ENABLED then
-            UIPanel.StatusLabel.Text = "📊 АКТИВЕН ✓"
-        else
-            UIPanel.StatusLabel.Text = "📊 ВЫКЛЮЧЕН"
-        end
-    end
-end
-
 -- Обновление UI каждый кадр
 RunService.RenderStepped:Connect(function()
-    CurrentCoins = GetCoins()
-    UpdateUI()
+    if CONFIG.AUTO_FARM_ENABLED then
+        CurrentCoins = GetCoins()
+        UpdateUI()
+    end
 end)
 
 -- ===== ИНИЦИАЛИЗАЦИЯ =====
-wait(1)
+task.wait(1)
 Log("Скрипт загружен для МОБИЛЬНОГО УСТРОЙСТВА!")
 UIPanel = CreateUI()
 Log("UI панель создана (складное меню)")
 
--- Запуск автофарма
-AutoFarm()
+-- Запуск автофарма в отдельной корутине
+spawn(function()
+    AutoFarm()
+end)
+
+Log("Автофарм готов к запуску!")
